@@ -1,0 +1,12 @@
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# htmlwidgets selfcontained output keeps everything inline; no _files dir.
+# Keep index.html tracked (GitHub Pages serves it).
+
+# Working notes — kept local, not published to the public mirror
+claude.md
+TODO.md
