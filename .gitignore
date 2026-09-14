@@ -10,3 +10,6 @@
 # Working notes — kept local, not published to the public mirror
 claude.md
 TODO.md
+
+# Source data is fetched/local, never tracked. Regenerate with R/fetch_data.R.
+data/

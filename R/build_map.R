@@ -1,9 +1,11 @@
 # build_map.R — Munich Radnetz Cycling Map
-# Milestone 1: OSM standard tiles + bounding box around Munich.
-# Output: index.html at repo root (served by GitHub Pages).
+# Base map (OSM tiles + Munich bounding box) with the Bayernnetz für Radler
+# route network clipped to the box. Output: index.html at repo root (GitHub Pages).
+# Requires data/ populated first: run R/fetch_data.R once.
 
 library(leaflet)
 library(htmlwidgets)
+library(sf)
 
 # --- Munich center + 250 km (per-side) bounding box ------------------------
 munich_lat <- 48.137
@@ -15,21 +17,53 @@ bbox <- list(
   north = 49.26, east = 13.26
 )
 
+# --- Route network: Bayernnetz für Radler (LDBV Bayern, CC BY 4.0) ----------
+shp <- "data/bayernnetz_radler/Bayernnetz_fuer_Radler/Bayernnetz_fuer_Radler.shp"
+routes <- st_read(shp, quiet = TRUE)
+
+# Simplify in native UTM (tolerance in metres) for a light, mobile-friendly file
+routes <- st_simplify(routes, dTolerance = 50, preserveTopology = TRUE)
+
+# Reproject to WGS84, then clip to the Munich box
+routes <- st_transform(routes, 4326)
+routes <- suppressWarnings(
+  st_crop(routes, c(xmin = bbox$west, ymin = bbox$south,
+                    xmax = bbox$east, ymax = bbox$north))
+)
+
 # --- Map -------------------------------------------------------------------
+route_color <- "#c2255c"  # high-contrast magenta, reads well over OSM tiles
+
 map <- leaflet(
   options = leafletOptions(minZoom = 7, maxZoom = 16)
 ) |>
   addTiles(
     urlTemplate = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution = "&copy; OpenStreetMap contributors"
+    attribution = paste(
+      "&copy; OpenStreetMap contributors",
+      "| Radrouten: &copy; Bayerische Vermessungsverwaltung (CC BY 4.0)"
+    )
   ) |>
   setView(lng = munich_lng, lat = munich_lat, zoom = 9) |>
   setMaxBounds(
     lng1 = bbox$west, lat1 = bbox$south,
     lng2 = bbox$east, lat2 = bbox$north
+  ) |>
+  addPolylines(
+    data = routes,
+    color = route_color, weight = 3, opacity = 0.85,
+    label = ~Name,
+    highlightOptions = highlightOptions(
+      weight = 5, color = "#7a0f3d", opacity = 1, bringToFront = TRUE
+    ),
+    group = "Bayernnetz für Radler"
+  ) |>
+  addLayersControl(
+    overlayGroups = "Bayernnetz für Radler",
+    options = layersControlOptions(collapsed = FALSE)
   )
 
 # --- Export ----------------------------------------------------------------
 out <- file.path(getwd(), "index.html")
 saveWidget(map, out, selfcontained = TRUE, title = "Munich Radnetz Cycling Map")
-cat("Wrote", out, "\n")
+cat("Wrote", out, "with", nrow(routes), "route segments in box\n")

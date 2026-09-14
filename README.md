@@ -8,34 +8,40 @@ self-contained `index.html`, and served via GitHub Pages.
 
 ## Current state
 
-Milestone 1: OpenStreetMap base tiles + a ~250 km bounding box around Munich
-(center 48.137 N, 11.575 E). Route, lodging, bike-shop, and POI layers to follow.
+OpenStreetMap base tiles + a ~250 km bounding box around Munich (center
+48.137 N, 11.575 E), with the **Bayernnetz für Radler** route network clipped
+to the box. Lodging, bike-shop, and POI layers to follow.
 
 ## Build
 
-R runs inside the `rstudio` Docker container (nothing installed on the host):
+R runs inside the `rstudio` Docker container (nothing installed on the host).
+First fetch the source data (once, or to refresh), then build:
 
 ```bash
 docker exec --user rstudio --workdir /data/projects/r/germany rstudio \
-  Rscript R/build_map.R
+  Rscript R/fetch_data.R      # download + unzip source data into data/
+docker exec --user rstudio --workdir /data/projects/r/germany rstudio \
+  Rscript R/build_map.R       # write index.html at repo root
 ```
 
-This writes `index.html` at the repo root. Push to `main` and GitHub Pages
-redeploys automatically.
+Push to `main` and GitHub Pages redeploys automatically.
 
 ## Data layout
 
-Files are organized by source: `data/<source>/<file>` (snake_case source folders).
+Files are organized by source: `data/<source>/<file>` (snake_case). The whole
+`data/` folder is gitignored — raw data is fetched, never committed. Rebuild it
+with `R/fetch_data.R`.
 
 ```
 data/
-  waymarked_trails/route.gpx      # cycling route (Waymarked Trails GPX export)
-  bett_bike/lodging.gpx           # lodging POIs (Bett+Bike GPX export)
-  overpass/                       # optional cached osmdata/Overpass pulls (shops, POIs)
+  bayernnetz_radler/   # route network shapefile (LDBV Bayern OpenData, CC BY 4.0)
+  bett_bike/           # lodging POIs (future)
+  overpass/            # cached osmdata/Overpass pulls (future; usually queried live)
 ```
 
-Bike-shop and POI layers are normally queried live via `osmdata`/Overpass at
-build time; `overpass/` is only for cached snapshots.
+**Route source:** Bayernnetz für Radler, Bayerische Vermessungsverwaltung (LDBV),
+via [geodaten.bayern.de OpenData](https://geodaten.bayern.de/opengeodata/OpenDataDetail.html?pn=bvv_bayernnetzradler)
+— 123 named long-distance routes, CC BY 4.0 (attribution required).
 
 ## Stack
 
