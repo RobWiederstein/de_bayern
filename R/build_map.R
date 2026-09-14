@@ -57,6 +57,20 @@ lodging_popup <- paste0(
          paste0("<br><a href='", lodging$link1_href, "' target='_blank'>Website</a>"))
 )
 
+# Trip overnight towns -> filter lodging to just these (within 5 km of center)
+stage_towns <- st_as_sf(
+  data.frame(
+    town = c("Mühldorf am Inn", "Bad Füssing", "Passau", "Straubing",
+             "Regensburg", "Neumarkt i.d.OPf.", "Nürnberg"),
+    lon  = c(12.524, 13.315, 13.465, 12.573, 12.097, 11.462, 11.078),
+    lat  = c(48.248, 48.348, 48.574, 48.881, 49.019, 49.280, 49.452)
+  ),
+  coords = c("lon", "lat"), crs = 4326
+)
+trip_idx <- lengths(st_is_within_distance(lodging, stage_towns, 5000)) > 0
+trip_lodging <- lodging[trip_idx, ]
+trip_popup   <- lodging_popup[trip_idx]
+
 # --- Map -------------------------------------------------------------------
 route_color <- "#c2255c"  # high-contrast magenta, reads well over OSM tiles
 
@@ -64,7 +78,8 @@ route_color <- "#c2255c"  # high-contrast magenta, reads well over OSM tiles
 # later (lodging, bike shops, POIs) should load OFF via hideGroup(). Context
 # layers like the Bayern boundary may default ON since they aid orientation.
 trail_group   <- "Bike trails (Bayernnetz für Radler)"
-lodging_group <- "Bett+Bike lodging"
+trip_group    <- "Trip lodging (overnights)"
+lodging_group <- "Bett+Bike lodging (all Bayern)"
 border_group  <- "Bayern boundary"
 
 pad <- 0.2  # degrees of slack around Bayern for the pan limit
@@ -101,7 +116,7 @@ map <- leaflet(
     ),
     group = trail_group
   ) |>
-  # Bett+Bike lodging: clustered markers, off by default (see hideGroup below)
+  # Full Bett+Bike lodging: clustered markers, off by default (see hideGroup)
   addCircleMarkers(
     data = lodging,
     radius = 5, weight = 1, color = "#ffffff", opacity = 1,
@@ -109,6 +124,14 @@ map <- leaflet(
     label = ~name, popup = lodging_popup,
     clusterOptions = markerClusterOptions(),
     group = lodging_group
+  ) |>
+  # Trip lodging: just the overnight towns, on by default, larger green pins
+  addCircleMarkers(
+    data = trip_lodging,
+    radius = 7, weight = 1.5, color = "#ffffff", opacity = 1,
+    fillColor = "#2f9e44", fillOpacity = 0.95,
+    label = ~name, popup = trip_popup,
+    group = trip_group
   )
 
 # --- My route (optional): drawn on top if a file exists in data/my_route/ ---
@@ -116,7 +139,7 @@ map <- leaflet(
 # GPX/GeoJSON/KML, and save it as data/my_route/route.<ext>. It then renders as
 # the star layer (bold orange, on top of the Bayernnetz), on by default.
 myroute_group <- "My route"
-overlay_groups <- c(trail_group, lodging_group, border_group)
+overlay_groups <- c(trail_group, trip_group, lodging_group, border_group)
 
 route_files <- list.files("data/my_route",
                           pattern = "\\.(gpx|geojson|json|kml|kmz)$",
