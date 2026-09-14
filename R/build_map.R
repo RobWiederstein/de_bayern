@@ -31,13 +31,23 @@ routes <- suppressWarnings(
                     xmax = bbox$east, ymax = bbox$north))
 )
 
+# --- State borders: VG2500 Länder (BKG, dl-de/by-2-0) ----------------------
+states <- st_read("data/bkg_vg2500/vg2500/VG2500_LAN.shp", quiet = TRUE)
+states <- states[states$GF == 9, ]          # drop water-area slivers (GF 8)
+states <- st_transform(states, 4326)
+# Keep only states touching the box; draw full outlines (no artificial clip edges)
+box_ll <- st_as_sfc(st_bbox(c(xmin = bbox$west, ymin = bbox$south,
+                              xmax = bbox$east, ymax = bbox$north), crs = 4326))
+states <- states[lengths(st_intersects(states, box_ll)) > 0, ]
+
 # --- Map -------------------------------------------------------------------
 route_color <- "#c2255c"  # high-contrast magenta, reads well over OSM tiles
 
-# The bike trails are the principal layer: shown by default. Future overlays
-# (lodging, bike shops, POIs) should be added as their own groups and switched
-# OFF at load with hideGroup(), so the trails remain the default view.
-trail_group <- "Bike trails (Bayernnetz für Radler)"
+# The bike trails are the principal layer: shown by default. Data overlays added
+# later (lodging, bike shops, POIs) should load OFF via hideGroup(). Context
+# layers like state borders may default ON since they aid orientation.
+trail_group  <- "Bike trails (Bayernnetz für Radler)"
+border_group <- "State borders"
 
 map <- leaflet(
   options = leafletOptions(minZoom = 7, maxZoom = 16)
@@ -46,13 +56,22 @@ map <- leaflet(
     urlTemplate = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution = paste(
       "&copy; OpenStreetMap contributors",
-      "| Radrouten: &copy; Bayerische Vermessungsverwaltung (CC BY 4.0)"
+      "| Radrouten: &copy; Bayerische Vermessungsverwaltung (CC BY 4.0)",
+      "| Grenzen: &copy; GeoBasis-DE / BKG 2026 (dl-de/by-2-0)"
     )
   ) |>
   setView(lng = munich_lng, lat = munich_lat, zoom = 9) |>
   setMaxBounds(
     lng1 = bbox$west, lat1 = bbox$south,
     lng2 = bbox$east, lat2 = bbox$north
+  ) |>
+  # State borders first, so the trails draw on top of them
+  addPolygons(
+    data = states,
+    fill = FALSE, color = "#555555", weight = 1.5, opacity = 0.6,
+    dashArray = "4",
+    label = ~GEN,
+    group = border_group
   ) |>
   addPolylines(
     data = routes,
@@ -64,10 +83,10 @@ map <- leaflet(
     group = trail_group
   ) |>
   addLayersControl(
-    overlayGroups = trail_group,
+    overlayGroups = c(trail_group, border_group),
     options = layersControlOptions(collapsed = FALSE)
   )
-# Note: no hideGroup(trail_group) — trails stay ON by default (project's core layer).
+# Both groups load ON: trails (core layer) and state borders (orientation context).
 
 # --- Export ----------------------------------------------------------------
 out <- file.path(getwd(), "index.html")
