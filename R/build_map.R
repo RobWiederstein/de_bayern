@@ -71,6 +71,21 @@ trip_idx <- lengths(st_is_within_distance(lodging, stage_towns, 5000)) > 0
 trip_lodging <- lodging[trip_idx, ]
 trip_popup   <- lodging_popup[trip_idx]
 
+# --- Bike shops: OpenStreetMap shop=bicycle in Bayern (ODbL) -----------------
+bs <- jsonlite::fromJSON("data/osm_bikeshops/bikeshops_bayern.json", flatten = TRUE)$elements
+bs_col <- function(n) if (n %in% names(bs)) bs[[n]] else rep(NA, nrow(bs))
+bs_lon <- ifelse(!is.na(bs_col("lon")), bs_col("lon"), bs_col("center.lon"))
+bs_lat <- ifelse(!is.na(bs_col("lat")), bs_col("lat"), bs_col("center.lat"))
+bs_keep <- !is.na(bs_lon) & !is.na(bs_lat)
+shops <- st_as_sf(
+  data.frame(
+    name = ifelse(is.na(bs_col("tags.name")[bs_keep]), "Bike shop", bs_col("tags.name")[bs_keep]),
+    lon = bs_lon[bs_keep], lat = bs_lat[bs_keep]
+  ),
+  coords = c("lon", "lat"), crs = 4326
+)
+shops <- shops[lengths(st_intersects(shops, bayern_geom)) > 0, ]  # inside Bayern
+
 # --- Map -------------------------------------------------------------------
 route_color <- "#c2255c"  # high-contrast magenta, reads well over OSM tiles
 
@@ -80,6 +95,7 @@ route_color <- "#c2255c"  # high-contrast magenta, reads well over OSM tiles
 trail_group   <- "Bike trails (Bayernnetz für Radler)"
 trip_group    <- "Trip lodging (overnights)"
 lodging_group <- "Bett+Bike lodging (all Bayern)"
+shops_group   <- "Bike shops (all Bayern)"
 border_group  <- "Bayern boundary"
 
 pad <- 0.2  # degrees of slack around Bayern for the pan limit
@@ -132,6 +148,15 @@ map <- leaflet(
     fillColor = "#2f9e44", fillOpacity = 0.95,
     label = ~name, popup = trip_popup,
     group = trip_group
+  ) |>
+  # Bike shops (OSM): clustered, off by default (see hideGroup below)
+  addCircleMarkers(
+    data = shops,
+    radius = 5, weight = 1, color = "#ffffff", opacity = 1,
+    fillColor = "#6741d9", fillOpacity = 0.9,
+    label = ~name,
+    clusterOptions = markerClusterOptions(),
+    group = shops_group
   )
 
 # --- My route (optional): drawn on top if a file exists in data/my_route/ ---
@@ -139,7 +164,7 @@ map <- leaflet(
 # GPX/GeoJSON/KML, and save it as data/my_route/route.<ext>. It then renders as
 # the star layer (bold orange, on top of the Bayernnetz), on by default.
 myroute_group <- "My route"
-overlay_groups <- c(trail_group, trip_group, lodging_group, border_group)
+overlay_groups <- c(trail_group, trip_group, lodging_group, shops_group, border_group)
 
 route_files <- list.files("data/my_route",
                           pattern = "\\.(gpx|geojson|json|kml|kmz)$",
@@ -162,8 +187,9 @@ map <- addLayersControl(
   overlayGroups = overlay_groups,
   options = layersControlOptions(collapsed = FALSE)
 )
-# Lodging is a data overlay: load it OFF so trails stay the default view.
+# Data overlays load OFF so trails stay the default view.
 map <- hideGroup(map, lodging_group)
+map <- hideGroup(map, shops_group)
 # Groups ON by default: My route (if present), trails, Bayern boundary.
 # OFF by default: Bett+Bike lodging (toggle on to plan).
 

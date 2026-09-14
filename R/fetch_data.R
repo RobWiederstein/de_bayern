@@ -51,4 +51,32 @@ fetch_file(
   "data/bett_bike"
 )
 
+# 4. Bike shops: OpenStreetMap shop=bicycle in Bavaria (Overpass API, ODbL).
+#    Public Overpass mirrors are load-shedding, so try several with retries.
+fetch_overpass <- function(query, dest, tries = 6) {
+  endpoints <- c("https://overpass-api.de/api/interpreter",
+                 "https://overpass.kumi.systems/api/interpreter")
+  old_ua <- getOption("HTTPUserAgent")
+  options(HTTPUserAgent = "de_bayern-cyclemap/1.0 (personal cycling project)")
+  on.exit(options(HTTPUserAgent = old_ua), add = TRUE)
+  dir.create(dirname(dest), showWarnings = FALSE, recursive = TRUE)
+  for (attempt in seq_len(tries)) {
+    ep <- endpoints[[((attempt - 1) %% length(endpoints)) + 1]]
+    ok <- tryCatch({
+      download.file(paste0(ep, "?data=", utils::URLencode(query, reserved = TRUE)),
+                    dest, mode = "wb", quiet = TRUE)
+      body <- paste(readLines(dest, warn = FALSE), collapse = "")
+      grepl('"elements"', body, fixed = TRUE) && !grepl("runtime error", body)
+    }, error = function(e) FALSE)
+    if (isTRUE(ok)) { message("Overpass OK via ", ep, " (attempt ", attempt, ")"); return(invisible(TRUE)) }
+    message("Overpass attempt ", attempt, " (", ep, ") busy/failed; waiting ...")
+    Sys.sleep(6)
+  }
+  stop("Overpass fetch failed after ", tries, " attempts")
+}
+fetch_overpass(
+  '[out:json][timeout:180];area["ISO3166-2"="DE-BY"]->.a;nwr["shop"="bicycle"](area.a);out center;',
+  "data/osm_bikeshops/bikeshops_bayern.json"
+)
+
 cat("\nDone.\n")
