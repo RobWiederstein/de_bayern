@@ -1,16 +1,17 @@
-# de_bayern — Munich Radnetz Cycling Map
+# de_bayern — Bayern Radnetz Cycling Map
 
-A lightweight, mobile-friendly [Leaflet](https://leafletjs.com/) map for a
-cycling trip around Munich, Bavaria. Built in R, exported as a single
+A lightweight, mobile-friendly [Leaflet](https://leafletjs.com/) map for
+cycling in Bayern (Bavaria), Germany. Built in R, exported as a single
 self-contained `index.html`, and served via GitHub Pages.
 
 **Live map:** https://robwiederstein.github.io/de_bayern/
 
 ## Current state
 
-OpenStreetMap base tiles + a ~250 km bounding box around Munich (center
-48.137 N, 11.575 E), with the **Bayernnetz für Radler** route network clipped
-to the box. Lodging, bike-shop, and POI layers to follow.
+OpenStreetMap base tiles with the view, pan-bounds, and all data layers clipped
+to the **Bayern** state boundary (BKG VG2500). Shows the full **Bayernnetz für
+Radler** route network plus the Bayern outline. Lodging, bike-shop, and POI
+layers to follow.
 
 ## Build
 
