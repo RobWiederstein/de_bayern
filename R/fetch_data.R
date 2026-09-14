@@ -32,4 +32,23 @@ fetch_zip(
   "data/bkg_vg2500"
 )
 
+# 3. Bett+Bike certified accommodations (POI GPX, Germany).
+#    NOTE: bettundbike.de licenses this "nur für den Privatgebrauch" (private use
+#    only). Used here for a personal, non-commercial trip map, clipped to Bayern.
+#    The download URL is date-versioned and changes when they refresh the data.
+fetch_file <- function(url, dest_dir) {
+  dir.create(dest_dir, showWarnings = FALSE, recursive = TRUE)
+  dest <- file.path(dest_dir, basename(url))
+  if (!file.exists(dest)) {
+    message("Downloading ", basename(url), " ...")
+    download.file(url, dest, mode = "wb", quiet = FALSE)
+  } else {
+    message("Already present: ", dest)
+  }
+}
+fetch_file(
+  "https://www.bettundbike.de/fileadmin/user_upload/GPS-POI/bettundbike-2026-06_de.gpx",
+  "data/bett_bike"
+)
+
 cat("\nDone.\n")
