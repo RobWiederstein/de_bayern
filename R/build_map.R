@@ -52,8 +52,8 @@ map <- leaflet(
   # Bayern outline first, so the trails draw on top of it
   addPolygons(
     data = bayern,
-    fill = FALSE, color = "#555555", weight = 1.5, opacity = 0.7,
-    dashArray = "4",
+    fill = FALSE, color = "#2b2b2b", weight = 3, opacity = 0.9,
+    dashArray = "6",
     label = ~GEN,
     group = border_group
   ) |>
