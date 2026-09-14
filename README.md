@@ -44,6 +44,19 @@ data/
 via [geodaten.bayern.de OpenData](https://geodaten.bayern.de/opengeodata/OpenDataDetail.html?pn=bvv_bayernnetzradler)
 — 123 named long-distance routes, CC BY 4.0 (attribution required).
 
+## Adding your own trip route
+
+Draw the route in an external tool and export it — the build picks it up
+automatically. Save the export as `data/my_route/route.gpx` (or `.geojson` /
+`.kml`), then rebuild. It renders as the **"My route"** layer: bold orange, on
+top of the Bayernnetz, on by default. No file present → the layer is skipped.
+
+Authoring tools:
+- **Snapped to bike paths** (recommended for a ridable route): brouter-web.de,
+  cycle.travel, or komoot → export GPX.
+- **Freehand click-to-draw**: geojson.io (exports GeoJSON) or Google *My* Maps
+  (exports KML). Quick, but segments are straight lines between clicks.
+
 ## Stack
 
 R · leaflet · htmlwidgets · sf · osmdata

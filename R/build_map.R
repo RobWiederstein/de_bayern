@@ -7,6 +7,27 @@ library(leaflet)
 library(htmlwidgets)
 library(sf)
 
+# Read a hand-authored route file (GPX / GeoJSON / KML) as WGS84 line geometry.
+# GPX stores the line in its "tracks" or "routes" layer; other formats read
+# directly. Elevation (Z/M) is dropped so leaflet gets clean lng/lat lines.
+load_route <- function(path) {
+  ext <- tolower(tools::file_ext(path))
+  g <- NULL
+  if (ext == "gpx") {
+    lyrs <- st_layers(path)$name
+    for (cand in c("tracks", "routes")) {
+      if (cand %in% lyrs) {
+        gg <- suppressWarnings(st_read(path, layer = cand, quiet = TRUE))
+        if (nrow(gg) > 0) { g <- gg; break }
+      }
+    }
+  }
+  if (is.null(g)) g <- suppressWarnings(st_read(path, quiet = TRUE))
+  g <- st_zm(g, drop = TRUE, what = "ZM")
+  g <- st_transform(g, 4326)
+  g[st_geometry_type(g) %in% c("LINESTRING", "MULTILINESTRING"), ]
+}
+
 # --- Clip region: Bayern boundary (BKG VG2500, dl-de/by-2-0) ----------------
 states <- st_read("data/bkg_vg2500/vg2500/VG2500_LAN.shp", quiet = TRUE)
 states <- states[states$GF == 9, ]           # land polygons (drop water slivers)
@@ -65,12 +86,37 @@ map <- leaflet(
       weight = 5, color = "#7a0f3d", opacity = 1, bringToFront = TRUE
     ),
     group = trail_group
-  ) |>
-  addLayersControl(
-    overlayGroups = c(trail_group, border_group),
-    options = layersControlOptions(collapsed = FALSE)
   )
-# Both groups load ON: trails (core layer) and Bayern boundary (orientation).
+
+# --- My route (optional): drawn on top if a file exists in data/my_route/ ---
+# Draw the route in geojson.io / Google My Maps / brouter-web / komoot, export
+# GPX/GeoJSON/KML, and save it as data/my_route/route.<ext>. It then renders as
+# the star layer (bold orange, on top of the Bayernnetz), on by default.
+myroute_group <- "My route"
+overlay_groups <- c(trail_group, border_group)
+
+route_files <- list.files("data/my_route",
+                          pattern = "\\.(gpx|geojson|json|kml|kmz)$",
+                          full.names = TRUE, ignore.case = TRUE)
+if (length(route_files) > 0) {
+  my_route <- load_route(route_files[[1]])
+  map <- addPolylines(
+    map, data = my_route,
+    color = "#e8590c", weight = 6, opacity = 0.95,
+    group = myroute_group
+  )
+  overlay_groups <- c(myroute_group, overlay_groups)  # list first in control
+  message("Added 'My route' from ", route_files[[1]])
+} else {
+  message("No file in data/my_route/ yet — 'My route' layer skipped.")
+}
+
+map <- addLayersControl(
+  map,
+  overlayGroups = overlay_groups,
+  options = layersControlOptions(collapsed = FALSE)
+)
+# Groups load ON: My route (star, if present), trails, Bayern boundary.
 
 # --- Export ----------------------------------------------------------------
 out <- file.path(getwd(), "index.html")
