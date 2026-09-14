@@ -34,6 +34,11 @@ routes <- suppressWarnings(
 # --- Map -------------------------------------------------------------------
 route_color <- "#c2255c"  # high-contrast magenta, reads well over OSM tiles
 
+# The bike trails are the principal layer: shown by default. Future overlays
+# (lodging, bike shops, POIs) should be added as their own groups and switched
+# OFF at load with hideGroup(), so the trails remain the default view.
+trail_group <- "Bike trails (Bayernnetz für Radler)"
+
 map <- leaflet(
   options = leafletOptions(minZoom = 7, maxZoom = 16)
 ) |>
@@ -56,12 +61,13 @@ map <- leaflet(
     highlightOptions = highlightOptions(
       weight = 5, color = "#7a0f3d", opacity = 1, bringToFront = TRUE
     ),
-    group = "Bayernnetz für Radler"
+    group = trail_group
   ) |>
   addLayersControl(
-    overlayGroups = "Bayernnetz für Radler",
+    overlayGroups = trail_group,
     options = layersControlOptions(collapsed = FALSE)
   )
+# Note: no hideGroup(trail_group) — trails stay ON by default (project's core layer).
 
 # --- Export ----------------------------------------------------------------
 out <- file.path(getwd(), "index.html")
