@@ -23,6 +23,20 @@ docker exec --user rstudio --workdir /data/projects/r/germany rstudio \
 This writes `index.html` at the repo root. Push to `main` and GitHub Pages
 redeploys automatically.
 
+## Data layout
+
+Files are organized by source: `data/<source>/<file>` (snake_case source folders).
+
+```
+data/
+  waymarked_trails/route.gpx      # cycling route (Waymarked Trails GPX export)
+  bett_bike/lodging.gpx           # lodging POIs (Bett+Bike GPX export)
+  overpass/                       # optional cached osmdata/Overpass pulls (shops, POIs)
+```
+
+Bike-shop and POI layers are normally queried live via `osmdata`/Overpass at
+build time; `overpass/` is only for cached snapshots.
+
 ## Stack
 
 R · leaflet · htmlwidgets · sf · osmdata
